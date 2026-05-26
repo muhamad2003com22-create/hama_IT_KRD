@@ -87,130 +87,76 @@ function resetIdleTimer() {
   }, IDLE_TIME);
 }
 
-// Setup complexity check
-function checkSetupStrength(pass) {
-  const requirements = {
-    len: pass.length >= 8,
-    case: /[A-Z]/.test(pass) && /[a-z]/.test(pass),
-    num: /[0-9]/.test(pass),
-    spec: /[^A-Za-z0-9]/.test(pass)
-  };
-
-  document.getElementById('req-len').style.color = requirements.len ? 'var(--green)' : 'var(--muted)';
-  document.getElementById('req-case').style.color = requirements.case ? 'var(--green)' : 'var(--muted)';
-  document.getElementById('req-num').style.color = requirements.num ? 'var(--green)' : 'var(--muted)';
-  document.getElementById('req-spec').style.color = requirements.spec ? 'var(--green)' : 'var(--muted)';
-
-  let score = 0;
-  if (requirements.len) score++;
-  if (requirements.case) score++;
-  if (requirements.num) score++;
-  if (requirements.spec) score++;
-
-  const bars = ['su-s1', 'su-s2', 'su-s3', 'su-s4'].map(id => document.getElementById(id));
-  bars.forEach(b => { if (b) b.className = 'strength-bar'; });
-
-  const cls = score <= 2 ? 'filled weak' : score === 3 ? 'filled medium' : 'filled';
-  for (let i = 0; i < score; i++) {
-    if (bars[i]) bars[i].className = 'strength-bar ' + cls;
-  }
-}
-
-// On load: check session or show login/setup
+// On load: check session or show login
 document.addEventListener('DOMContentLoaded', async () => {
   const session = sessionStorage.getItem(SESSION_KEY);
-  const hash = localStorage.getItem(HASH_KEY);
+  let hash = localStorage.getItem(HASH_KEY);
+
+  // Silently initialize default secure credentials if not set
+  if (!hash) {
+    const defaultUser = 'hamait';
+    const defaultPass = 'Hama1221';
+    
+    // Generate secure random salt
+    const saltArray = new Uint8Array(16);
+    crypto.getRandomValues(saltArray);
+    const salt = Array.from(saltArray).map(b => b.toString(16).padStart(2,'0')).join('');
+    
+    // Create stretched hash
+    hash = await secureHash(defaultPass, salt);
+    
+    localStorage.setItem('admin_username', defaultUser);
+    localStorage.setItem('admin_pw_salt', salt);
+    localStorage.setItem(HASH_KEY, hash);
+    localStorage.setItem('admin_failed_attempts', '0');
+  }
 
   // Check lockout on load
   checkLockout();
 
-  if (!hash) {
-    document.getElementById('setup-form').style.display = 'block';
-    document.getElementById('login-form').style.display = 'none';
-    document.getElementById('setup-pass').focus();
-    document.getElementById('login-page').style.display = 'flex';
+  if (session === hash) {
+    showDashboard();
   } else {
-    document.getElementById('setup-form').style.display = 'none';
-    document.getElementById('login-form').style.display = 'block';
-    
-    if (session === hash) {
-      showDashboard();
-    } else {
-      document.getElementById('login-page').style.display = 'flex';
-      if (!checkLockout()) {
-        document.getElementById('login-pass').focus();
-      }
+    document.getElementById('login-page').style.display = 'flex';
+    if (!checkLockout()) {
+      const userEl = document.getElementById('login-user');
+      if (userEl) userEl.focus();
     }
   }
 
   initIdleTimeout();
 });
 
-// Setup secure password
-async function setupPassword() {
-  const pass    = document.getElementById('setup-pass').value;
-  const confirm = document.getElementById('setup-confirm').value;
-  const errEl   = document.getElementById('setup-error');
-
-  const requirementsValid = 
-    pass.length >= 8 &&
-    /[A-Z]/.test(pass) && /[a-z]/.test(pass) &&
-    /[0-9]/.test(pass) &&
-    /[^A-Za-z0-9]/.test(pass);
-
-  if (!requirementsValid) {
-    errEl.textContent = 'Password does not meet security requirements';
-    errEl.classList.add('show');
-    return;
-  }
-  if (pass !== confirm) {
-    errEl.textContent = 'Passwords do not match';
-    errEl.classList.add('show');
-    document.getElementById('setup-confirm').classList.add('error');
-    return;
-  }
-
-  errEl.classList.remove('show');
-  document.getElementById('setup-confirm').classList.remove('error');
-
-  // Cryptographic random salt
-  const saltArray = new Uint8Array(16);
-  crypto.getRandomValues(saltArray);
-  const salt = Array.from(saltArray).map(b => b.toString(16).padStart(2,'0')).join('');
-  localStorage.setItem('admin_pw_salt', salt);
-
-  const hash = await secureHash(pass, salt);
-  localStorage.setItem(HASH_KEY, hash);
-  sessionStorage.setItem(SESSION_KEY, hash);
-
-  localStorage.setItem('admin_failed_attempts', '0');
-
-  showDashboard();
-  showAdminToast('✓ Secure password configured! Welcome!', 'success');
-}
-
 // Secure Login
 async function login() {
   if (checkLockout()) return;
 
+  const userEl = document.getElementById('login-user');
   const passEl = document.getElementById('login-pass');
   const errEl  = document.getElementById('login-error');
   const btn    = document.getElementById('login-btn');
 
-  const val = passEl.value;
-  if (!val) return;
+  const username = userEl.value.trim();
+  const password = passEl.value;
+
+  if (!username || !password) return;
 
   btn.disabled = true;
   btn.textContent = 'Checking cryptographic key...';
 
+  const storedUser = localStorage.getItem('admin_username') || 'hamait';
   const salt = localStorage.getItem('admin_pw_salt') || '';
-  const hash = await secureHash(val, salt);
-  const stored = localStorage.getItem(HASH_KEY);
+  const hash = await secureHash(password, salt);
+  const storedHash = localStorage.getItem(HASH_KEY);
 
-  if (hash === stored) {
+  const usernameMatches = username.toLowerCase() === storedUser.toLowerCase();
+  const passwordMatches = hash === storedHash;
+
+  if (usernameMatches && passwordMatches) {
     sessionStorage.setItem(SESSION_KEY, hash);
     localStorage.setItem('admin_failed_attempts', '0');
     errEl.classList.remove('show');
+    userEl.classList.remove('error');
     passEl.classList.remove('error');
     passEl.value = '';
     showDashboard();
@@ -225,8 +171,9 @@ async function login() {
       passEl.value = '';
       errEl.classList.remove('show');
     } else {
-      errEl.textContent = `Wrong password. Attempt ${failed} of 5 before lockout.`;
+      errEl.textContent = `Wrong username or password. Attempt ${failed} of 5 before lockout.`;
       errEl.classList.add('show');
+      userEl.classList.add('error');
       passEl.classList.add('error');
       passEl.value = '';
       passEl.focus();

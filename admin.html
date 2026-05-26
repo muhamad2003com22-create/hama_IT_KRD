@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="admin.css" />
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/favicon.png" />
 </head>
 <body>
 
@@ -16,35 +18,6 @@
   <div class="login-card">
     <div class="login-logo">⚙️ Admin</div>
     <p class="login-subtitle" id="login-subtitle-text">Portfolio Control Panel</p>
-
-    <!-- First time setup -->
-    <div id="setup-form" style="display:none">
-      <p style="text-align:center;color:#94a3b8;font-size:0.88rem;margin-bottom:24px;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:14px;line-height:1.6">
-        🔐 First time setup — set your unique admin password
-      </p>
-      <div class="form-group">
-        <label class="form-label">New Password</label>
-        <input type="password" class="form-input" id="setup-pass" placeholder="Enter secure password" oninput="checkSetupStrength(this.value)" />
-        <div class="password-strength" style="margin-top: 8px;">
-          <div class="strength-bar" id="su-s1"></div>
-          <div class="strength-bar" id="su-s2"></div>
-          <div class="strength-bar" id="su-s3"></div>
-          <div class="strength-bar" id="su-s4"></div>
-        </div>
-        <div class="password-requirements" style="font-size: 0.76rem; color: var(--muted); margin-top: 10px; line-height: 1.5;">
-          <div id="req-len" style="transition: color 0.3s; color: var(--muted);">• Minimum 8 characters</div>
-          <div id="req-case" style="transition: color 0.3s; color: var(--muted);">• Uppercase & lowercase letters</div>
-          <div id="req-num" style="transition: color 0.3s; color: var(--muted);">• At least one number</div>
-          <div id="req-spec" style="transition: color 0.3s; color: var(--muted);">• At least one special character</div>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Confirm Password</label>
-        <input type="password" class="form-input" id="setup-confirm" placeholder="Repeat password" />
-        <div class="error-msg" id="setup-error">Passwords do not match</div>
-      </div>
-      <button class="login-btn" id="setup-btn" onclick="setupPassword()" style="margin-top: 10px;">Set Password & Login</button>
-    </div>
 
     <!-- Login form -->
     <div id="login-form">
@@ -59,11 +32,17 @@
 
       <div class="form-fields-wrap" id="login-fields-wrap">
         <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" class="form-input" id="login-user"
+                 placeholder="Enter username"
+                 onkeydown="if(event.key==='Enter')login()" />
+        </div>
+        <div class="form-group">
           <label class="form-label">Password</label>
           <input type="password" class="form-input" id="login-pass"
-                 placeholder="Enter your password"
+                 placeholder="Enter password"
                  onkeydown="if(event.key==='Enter')login()" />
-          <div class="error-msg" id="login-error">Wrong password. Try again.</div>
+          <div class="error-msg" id="login-error">Wrong username or password. Try again.</div>
         </div>
         <button class="login-btn" id="login-btn" onclick="login()">
           Login to Dashboard

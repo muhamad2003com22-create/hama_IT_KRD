@@ -184,6 +184,7 @@ body {
   padding: 4px;
   backdrop-filter: blur(10px);
 }
+.lang-text-short { display: none; }
 .lang-btn {
   padding: 6px 12px;
   border: none;
@@ -211,17 +212,55 @@ body {
 .hamburger {
   display: none;
   flex-direction: column;
-  gap: 5px;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 6px;
   cursor: pointer;
-  padding: 4px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03) !important;
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px;
+  transition: var(--transition);
+  outline: none;
+  width: 42px;
+  height: 42px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  appearance: none;
+  -webkit-appearance: none;
+}
+.hamburger:hover {
+  background: var(--cyan-dim) !important;
+  border-color: rgba(0, 212, 255, 0.3) !important;
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
 }
 .hamburger span {
   display: block;
-  width: 24px;
   height: 2px;
   background: var(--text-primary);
   border-radius: 2px;
   transition: var(--transition);
+  transform-origin: right center;
+}
+.hamburger span:nth-child(1) { width: 22px; }
+.hamburger span:nth-child(2) { width: 14px; }
+.hamburger span:nth-child(3) { width: 22px; }
+
+.hamburger:hover span:nth-child(2) { width: 22px; }
+
+.hamburger.open span:nth-child(1) {
+  transform: rotate(-45deg) translate(-2px, -3px);
+  width: 22px;
+}
+.hamburger.open span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.hamburger.open span:nth-child(3) {
+  transform: rotate(45deg) translate(-2px, 3px);
+  width: 22px;
 }
 
 /* ── Hero Section ──────────────────────────────────── */
@@ -971,6 +1010,9 @@ section {
   .navbar { padding: 14px 20px; }
   .navbar.scrolled { padding: 10px 20px; }
 
+  .lang-text-full { display: none; }
+  .lang-text-short { display: inline; }
+
   .nav-links {
     position: fixed;
     top: 70px; left: 0; right: 0;
@@ -1025,7 +1067,8 @@ section {
 
 @media (max-width: 360px) {
   .navbar { padding: 12px 10px; }
-  .lang-switcher { gap: 2px; padding: 2px; }
+  .navbar-actions { gap: 6px !important; }
+  .lang-switcher { gap: 1px; padding: 2px; }
   .lang-btn { padding: 4px 6px; font-size: 0.68rem; }
   .nav-logo { font-size: 1.15rem; }
   .hamburger { gap: 4px; }

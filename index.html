@@ -13,6 +13,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/favicon.png" />
 </head>
 <body>
 
@@ -35,12 +37,24 @@
       <li><a href="#projects" id="nav-projects">پرۆژەکان</a></li>
     </ul>
 
-    <div style="display:flex;align-items:center;gap:12px;">
+    <div class="navbar-actions" style="display:flex;align-items:center;gap:12px;">
       <div class="lang-switcher" id="lang-switcher">
-        <button class="lang-btn active" data-lang="ku" id="btn-ku">کوردی</button>
-        <button class="lang-btn" data-lang="ar" id="btn-ar">عربي</button>
-        <button class="lang-btn" data-lang="en" id="btn-en">EN</button>
-        <button class="lang-btn" data-lang="fa" id="btn-fa">فارسی</button>
+        <button class="lang-btn active" data-lang="ku" id="btn-ku">
+          <span class="lang-text-full">کوردی</span>
+          <span class="lang-text-short">KU</span>
+        </button>
+        <button class="lang-btn" data-lang="ar" id="btn-ar">
+          <span class="lang-text-full">عربي</span>
+          <span class="lang-text-short">AR</span>
+        </button>
+        <button class="lang-btn" data-lang="en" id="btn-en">
+          <span class="lang-text-full">EN</span>
+          <span class="lang-text-short">EN</span>
+        </button>
+        <button class="lang-btn" data-lang="fa" id="btn-fa">
+          <span class="lang-text-full">فارسی</span>
+          <span class="lang-text-short">FA</span>
+        </button>
       </div>
       <button class="hamburger" id="hamburger" aria-label="Menu">
         <span></span><span></span><span></span>
