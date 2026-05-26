@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — AI Developer Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+
+<!-- ── LOGIN PAGE ────────────────────────────── -->
+<div class="login-page" id="login-page">
+  <div class="login-card">
+    <div class="login-logo">⚙️ Admin</div>
+    <p class="login-subtitle" id="login-subtitle-text">Portfolio Control Panel</p>
+
+    <!-- First time setup -->
+    <div id="setup-form" style="display:none">
+      <p style="text-align:center;color:#94a3b8;font-size:0.88rem;margin-bottom:24px;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:14px;line-height:1.6">
+        🔐 First time setup — set your unique admin password
+      </p>
+      <div class="form-group">
+        <label class="form-label">New Password</label>
+        <input type="password" class="form-input" id="setup-pass" placeholder="Enter secure password" oninput="checkSetupStrength(this.value)" />
+        <div class="password-strength" style="margin-top: 8px;">
+          <div class="strength-bar" id="su-s1"></div>
+          <div class="strength-bar" id="su-s2"></div>
+          <div class="strength-bar" id="su-s3"></div>
+          <div class="strength-bar" id="su-s4"></div>
+        </div>
+        <div class="password-requirements" style="font-size: 0.76rem; color: var(--muted); margin-top: 10px; line-height: 1.5;">
+          <div id="req-len" style="transition: color 0.3s; color: var(--muted);">• Minimum 8 characters</div>
+          <div id="req-case" style="transition: color 0.3s; color: var(--muted);">• Uppercase & lowercase letters</div>
+          <div id="req-num" style="transition: color 0.3s; color: var(--muted);">• At least one number</div>
+          <div id="req-spec" style="transition: color 0.3s; color: var(--muted);">• At least one special character</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <input type="password" class="form-input" id="setup-confirm" placeholder="Repeat password" />
+        <div class="error-msg" id="setup-error">Passwords do not match</div>
+      </div>
+      <button class="login-btn" id="setup-btn" onclick="setupPassword()" style="margin-top: 10px;">Set Password & Login</button>
+    </div>
+
+    <!-- Login form -->
+    <div id="login-form">
+      <!-- Lockout Alert Overlay -->
+      <div id="lockout-overlay" style="display:none; text-align:center; padding: 16px; background: rgba(255, 71, 87, 0.1); border: 1px solid rgba(255, 71, 87, 0.25); border-radius: 12px; margin-bottom: 24px;">
+        <span style="font-size: 1.5rem;">🔒</span>
+        <h3 style="color: var(--red); font-size: 0.95rem; margin-top: 8px; font-weight: 700;">Locked Out Due to Security Throttling</h3>
+        <p style="color: var(--text-secondary, #94a3b8); font-size: 0.82rem; margin-top: 6px; line-height: 1.5;">
+          Please wait <strong id="lockout-timer" style="color: var(--red);">5:00</strong> before trying again.
+        </p>
+      </div>
+
+      <div class="form-fields-wrap" id="login-fields-wrap">
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="login-pass"
+                 placeholder="Enter your password"
+                 onkeydown="if(event.key==='Enter')login()" />
+          <div class="error-msg" id="login-error">Wrong password. Try again.</div>
+        </div>
+        <button class="login-btn" id="login-btn" onclick="login()">
+          Login to Dashboard
+        </button>
+      </div>
+      <p class="login-note">
+        🔒 Salted & stretched crypto hashing (10k rounds). Session expires after 15m idle.
+      </p>
+    </div>
+
+    <a href="index.html" class="back-link">← Back to Portfolio</a>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ──────────────────────────────── -->
+<div class="admin-layout" id="dashboard" style="display:none">
+
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <div class="sidebar-logo">⚙️ Admin Panel</div>
+    <ul class="sidebar-nav">
+      <li><a href="#" class="active" data-panel="projects" onclick="showPanel('projects',this)">
+        <span class="nav-icon">🚀</span> Projects
+      </a></li>
+      <li><a href="#" data-panel="social" onclick="showPanel('social',this)">
+        <span class="nav-icon">🔗</span> Social Links
+      </a></li>
+      <li><a href="#" data-panel="bio" onclick="showPanel('bio',this)">
+        <span class="nav-icon">📝</span> Bio / About
+      </a></li>
+      <li><a href="#" data-panel="settings" onclick="showPanel('settings',this)">
+        <span class="nav-icon">🔐</span> Security
+      </a></li>
+    </ul>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="logout()">
+        <span>🚪</span> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <h1 id="panel-title">🚀 Projects</h1>
+      <div class="topbar-meta">
+        <span class="status-dot"></span>
+        <span>Logged in</span>
+        <span>·</span>
+        <a href="index.html" target="_blank" style="color:var(--cyan);text-decoration:none;font-size:0.82rem;">
+          View Site ↗
+        </a>
+      </div>
+    </div>
+
+    <!-- ── PROJECTS PANEL ─────────────────────── -->
+    <div class="admin-panel active" id="panel-projects">
+
+      <!-- Add Project Form -->
+      <div class="admin-card">
+        <div class="admin-card-title"><span>➕</span> Add New Project</div>
+
+        <!-- Hidden defaults to satisfy javascript -->
+        <input type="hidden" id="p-icon" value="🌐" />
+        <input type="hidden" id="p-category" value="website" />
+        <input type="hidden" id="p-tags" value="" />
+
+        <div class="input-row">
+          <div class="input-group">
+            <label class="input-label">Project Title (Kurdish - کوردی)</label>
+            <input type="text" class="admin-input" id="p-title-ku" placeholder="E.g., پۆرتفۆلیۆکەم" style="direction: rtl;" />
+          </div>
+          <div class="input-group">
+            <label class="input-label">Project Title (English)</label>
+            <input type="text" class="admin-input" id="p-title-en" placeholder="E.g., My Portfolio" style="direction: ltr;" />
+          </div>
+        </div>
+
+        <div class="input-row" style="margin-top: 15px;">
+          <div class="input-group">
+            <label class="input-label">Description (Kurdish - کوردی) (Optional)</label>
+            <textarea class="admin-textarea" id="p-desc-ku" rows="2" placeholder="کورتەیەک دەربارەی پرۆژەکە بنووسە..." style="direction: rtl;"></textarea>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Description (English) (Optional)</label>
+            <textarea class="admin-textarea" id="p-desc-en" rows="2" placeholder="Write a brief project description..." style="direction: ltr;"></textarea>
+          </div>
+        </div>
+
+        <div class="input-row" style="margin-top: 15px;">
+          <div class="input-group">
+            <label class="input-label">Project Link (URL)</label>
+            <input type="url" class="admin-input" id="p-url" placeholder="https://yoursite.com" />
+          </div>
+        </div>
+
+        <div class="input-row" style="margin-top: 15px;">
+          <div class="input-group">
+            <label class="input-label">Project Image Link (URL)</label>
+            <input type="url" class="admin-input" id="p-image-url" placeholder="https://yoursite.com/image.png" />
+          </div>
+        </div>
+
+        <div class="input-row" style="margin-top: 15px;">
+          <div class="input-group">
+            <label class="input-label">Or Upload Local Image (وێنەیەک لە کۆمپیوتەرەکەت دابنێ)</label>
+            <input type="file" class="admin-input" id="p-image-file" accept="image/*" style="padding: 8px 12px; background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.15);" />
+            <small style="color: var(--muted); margin-top: 5px; display: block;">Supports PNG, JPG, WEBP</small>
+          </div>
+        </div>
+
+        <button class="btn-admin btn-admin-primary" onclick="addProject()" style="margin-top: 20px;">
+          <span>➕</span> Add Project
+        </button>
+      </div>
+
+      <!-- Projects List -->
+      <div class="admin-card">
+        <div class="admin-card-title"><span>📋</span> All Projects</div>
+        <div class="projects-table-wrap">
+          <table class="projects-table">
+            <thead>
+              <tr>
+                <th>Icon</th>
+                <th>Title (EN)</th>
+                <th>Category</th>
+                <th>URL</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="projects-table-body">
+              <tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">🚀</div><p>No projects yet</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SOCIAL LINKS PANEL ─────────────────── -->
+    <div class="admin-panel" id="panel-social">
+      <div class="admin-card">
+        <div class="admin-card-title"><span>🔗</span> Social Media Links</div>
+        <div class="social-links-grid" id="social-links-editor">
+
+          <div class="social-link-item">
+            <div class="social-link-header"><span class="social-link-emoji">📸</span> Instagram</div>
+            <div class="input-group">
+              <label class="input-label">Profile URL</label>
+              <input type="url" class="admin-input" id="sl-instagram-url" placeholder="https://instagram.com/username" />
+            </div>
+            <div class="input-group">
+              <label class="input-label">Handle</label>
+              <input type="text" class="admin-input" id="sl-instagram-handle" placeholder="@username" />
+            </div>
+          </div>
+
+          <div class="social-link-item">
+            <div class="social-link-header"><span class="social-link-emoji">✈️</span> Telegram</div>
+            <div class="input-group">
+              <label class="input-label">Profile URL</label>
+              <input type="url" class="admin-input" id="sl-telegram-url" placeholder="https://t.me/username" />
+            </div>
+            <div class="input-group">
+              <label class="input-label">Handle</label>
+              <input type="text" class="admin-input" id="sl-telegram-handle" placeholder="@username" />
+            </div>
+          </div>
+
+          <div class="social-link-item">
+            <div class="social-link-header"><span class="social-link-emoji">💬</span> WhatsApp</div>
+            <div class="input-group">
+              <label class="input-label">WhatsApp Link</label>
+              <input type="url" class="admin-input" id="sl-whatsapp-url" placeholder="https://wa.me/9647XXXXXXXXX" />
+            </div>
+            <div class="input-group">
+              <label class="input-label">Display Number</label>
+              <input type="text" class="admin-input" id="sl-whatsapp-handle" placeholder="+964 xxx xxx xxxx" />
+            </div>
+          </div>
+
+          <div class="social-link-item">
+            <div class="social-link-header"><span class="social-link-emoji">👥</span> Facebook</div>
+            <div class="input-group">
+              <label class="input-label">Profile URL</label>
+              <input type="url" class="admin-input" id="sl-facebook-url" placeholder="https://facebook.com/username" />
+            </div>
+            <div class="input-group">
+              <label class="input-label">Handle</label>
+              <input type="text" class="admin-input" id="sl-facebook-handle" placeholder="@username" />
+            </div>
+          </div>
+
+          <div class="social-link-item">
+            <div class="social-link-header"><span class="social-link-emoji">🎵</span> TikTok</div>
+            <div class="input-group">
+              <label class="input-label">Profile URL</label>
+              <input type="url" class="admin-input" id="sl-tiktok-url" placeholder="https://tiktok.com/@username" />
+            </div>
+            <div class="input-group">
+              <label class="input-label">Handle</label>
+              <input type="text" class="admin-input" id="sl-tiktok-handle" placeholder="@username" />
+            </div>
+          </div>
+
+          <div class="social-link-item">
+            <div class="social-link-header"><span class="social-link-emoji">👻</span> Snapchat</div>
+            <div class="input-group">
+              <label class="input-label">Profile URL</label>
+              <input type="url" class="admin-input" id="sl-snapchat-url" placeholder="https://snapchat.com/add/username" />
+            </div>
+            <div class="input-group">
+              <label class="input-label">Handle</label>
+              <input type="text" class="admin-input" id="sl-snapchat-handle" placeholder="@username" />
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <div class="save-bar">
+        <span class="save-bar-msg">Changes apply instantly to your portfolio</span>
+        <button class="btn-admin btn-admin-primary" onclick="saveSocialLinks()">
+          <span>💾</span> Save Social Links
+        </button>
+      </div>
+    </div>
+
+    <!-- ── BIO PANEL ──────────────────────────── -->
+    <div class="admin-panel" id="panel-bio">
+      <div class="admin-card">
+        <div class="admin-card-title"><span>📝</span> About / Bio Text</div>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:20px;">
+          Edit your bio for each language. Leave empty to use the default text.
+        </p>
+        <div class="bio-tabs">
+          <button class="bio-tab active" onclick="switchBioTab('ku', this)">🇹 کوردی</button>
+          <button class="bio-tab" onclick="switchBioTab('ar', this)">🇦 عربي</button>
+          <button class="bio-tab ltr" onclick="switchBioTab('en', this)">🇬 English</button>
+          <button class="bio-tab" onclick="switchBioTab('fa', this)">🇮 فارسی</button>
+        </div>
+        <div class="bio-editor active" id="bio-ku">
+          <textarea class="admin-textarea" id="bio-text-ku" rows="6" dir="rtl"
+            placeholder="دەربارەی خۆت بنووسە بە کوردی..."></textarea>
+        </div>
+        <div class="bio-editor" id="bio-ar">
+          <textarea class="admin-textarea" id="bio-text-ar" rows="6" dir="rtl"
+            placeholder="اكتب نبذة عنك بالعربية..."></textarea>
+        </div>
+        <div class="bio-editor ltr" id="bio-en">
+          <textarea class="admin-textarea" id="bio-text-en" rows="6" dir="ltr"
+            placeholder="Write your bio in English..."></textarea>
+        </div>
+        <div class="bio-editor" id="bio-fa">
+          <textarea class="admin-textarea" id="bio-text-fa" rows="6" dir="rtl"
+            placeholder="درباره خودت به فارسی بنویس..."></textarea>
+        </div>
+      </div>
+      <div class="save-bar">
+        <span class="save-bar-msg">Bio updates instantly on the portfolio</span>
+        <button class="btn-admin btn-admin-primary" onclick="saveBio()">
+          <span>💾</span> Save Bio
+        </button>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS PANEL ─────────────────────── -->
+    <div class="admin-panel" id="panel-settings">
+      <div class="admin-card" style="max-width:480px">
+        <div class="admin-card-title"><span>🔐</span> Change Password</div>
+        <div class="input-group">
+          <label class="input-label">Current Password</label>
+          <input type="password" class="admin-input" id="cur-pass" placeholder="Current password" />
+        </div>
+        <div class="input-group">
+          <label class="input-label">New Password</label>
+          <input type="password" class="admin-input" id="new-pass" placeholder="Min. 6 characters"
+                 oninput="checkStrength(this.value)" />
+          <div class="password-strength">
+            <div class="strength-bar" id="s1"></div>
+            <div class="strength-bar" id="s2"></div>
+            <div class="strength-bar" id="s3"></div>
+            <div class="strength-bar" id="s4"></div>
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="input-label">Confirm New Password</label>
+          <input type="password" class="admin-input" id="confirm-pass" placeholder="Repeat new password" />
+          <div class="error-msg" id="pass-error">Passwords do not match</div>
+        </div>
+        <button class="btn-admin btn-admin-primary" onclick="changePassword()" style="margin-top:8px">
+          <span>🔑</span> Update Password
+        </button>
+      </div>
+
+      <div class="admin-card" style="max-width:480px">
+        <div class="admin-card-title"><span>⚠️</span> Danger Zone</div>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;">
+          These actions cannot be undone. Please be careful.
+        </p>
+        <button class="btn-admin btn-admin-danger" onclick="clearAllProjects()">
+          🗑️ Clear All Projects
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="admin-toast" id="admin-toast">
+  <span id="a-toast-icon">✓</span>
+  <span id="a-toast-msg">Saved!</span>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>

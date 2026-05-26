@@ -1,0 +1,563 @@
+/* =============================================
+   ADMIN.JS — Admin Panel Logic
+   ============================================= */
+
+// ── Auth ──────────────────────────────────────
+const HASH_KEY    = 'admin_pw_hash';
+const SESSION_KEY = 'admin_session';
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// Salted stretched hashing (10,000 rounds)
+async function secureHash(password, salt) {
+  let combined = password + salt;
+  let hash = combined;
+  for (let i = 0; i < 10000; i++) {
+    hash = await sha256(hash);
+  }
+  return hash;
+}
+
+// Lockout check
+let lockoutTimerInterval = null;
+
+function checkLockout() {
+  const lockoutUntil = parseInt(localStorage.getItem('admin_lockout_until') || '0');
+  const now = Date.now();
+
+  if (lockoutUntil > now) {
+    document.getElementById('lockout-overlay').style.display = 'block';
+    document.getElementById('login-fields-wrap').style.display = 'none';
+    
+    updateLockoutCountdown(lockoutUntil);
+    if (!lockoutTimerInterval) {
+      lockoutTimerInterval = setInterval(() => {
+        updateLockoutCountdown(lockoutUntil);
+      }, 1000);
+    }
+    return true;
+  } else {
+    document.getElementById('lockout-overlay').style.display = 'none';
+    document.getElementById('login-fields-wrap').style.display = 'block';
+    if (lockoutTimerInterval) {
+      clearInterval(lockoutTimerInterval);
+      lockoutTimerInterval = null;
+    }
+    return false;
+  }
+}
+
+function updateLockoutCountdown(lockoutUntil) {
+  const now = Date.now();
+  const diff = lockoutUntil - now;
+  if (diff <= 0) {
+    localStorage.setItem('admin_failed_attempts', '0');
+    localStorage.removeItem('admin_lockout_until');
+    checkLockout();
+    return;
+  }
+  const mins = Math.floor(diff / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  document.getElementById('lockout-timer').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Idle logout timeout (15 minutes)
+let idleTimeout = null;
+const IDLE_TIME = 15 * 60 * 1000;
+
+function initIdleTimeout() {
+  const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+  events.forEach(name => {
+    document.addEventListener(name, resetIdleTimer, { passive: true });
+  });
+  resetIdleTimer();
+}
+
+function resetIdleTimer() {
+  if (idleTimeout) clearTimeout(idleTimeout);
+  idleTimeout = setTimeout(() => {
+    const session = sessionStorage.getItem(SESSION_KEY);
+    if (session) {
+      logout();
+      showAdminToast('⚠️ Session expired due to inactivity', 'error');
+    }
+  }, IDLE_TIME);
+}
+
+// Setup complexity check
+function checkSetupStrength(pass) {
+  const requirements = {
+    len: pass.length >= 8,
+    case: /[A-Z]/.test(pass) && /[a-z]/.test(pass),
+    num: /[0-9]/.test(pass),
+    spec: /[^A-Za-z0-9]/.test(pass)
+  };
+
+  document.getElementById('req-len').style.color = requirements.len ? 'var(--green)' : 'var(--muted)';
+  document.getElementById('req-case').style.color = requirements.case ? 'var(--green)' : 'var(--muted)';
+  document.getElementById('req-num').style.color = requirements.num ? 'var(--green)' : 'var(--muted)';
+  document.getElementById('req-spec').style.color = requirements.spec ? 'var(--green)' : 'var(--muted)';
+
+  let score = 0;
+  if (requirements.len) score++;
+  if (requirements.case) score++;
+  if (requirements.num) score++;
+  if (requirements.spec) score++;
+
+  const bars = ['su-s1', 'su-s2', 'su-s3', 'su-s4'].map(id => document.getElementById(id));
+  bars.forEach(b => { if (b) b.className = 'strength-bar'; });
+
+  const cls = score <= 2 ? 'filled weak' : score === 3 ? 'filled medium' : 'filled';
+  for (let i = 0; i < score; i++) {
+    if (bars[i]) bars[i].className = 'strength-bar ' + cls;
+  }
+}
+
+// On load: check session or show login/setup
+document.addEventListener('DOMContentLoaded', async () => {
+  const session = sessionStorage.getItem(SESSION_KEY);
+  const hash = localStorage.getItem(HASH_KEY);
+
+  // Check lockout on load
+  checkLockout();
+
+  if (!hash) {
+    document.getElementById('setup-form').style.display = 'block';
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('setup-pass').focus();
+    document.getElementById('login-page').style.display = 'flex';
+  } else {
+    document.getElementById('setup-form').style.display = 'none';
+    document.getElementById('login-form').style.display = 'block';
+    
+    if (session === hash) {
+      showDashboard();
+    } else {
+      document.getElementById('login-page').style.display = 'flex';
+      if (!checkLockout()) {
+        document.getElementById('login-pass').focus();
+      }
+    }
+  }
+
+  initIdleTimeout();
+});
+
+// Setup secure password
+async function setupPassword() {
+  const pass    = document.getElementById('setup-pass').value;
+  const confirm = document.getElementById('setup-confirm').value;
+  const errEl   = document.getElementById('setup-error');
+
+  const requirementsValid = 
+    pass.length >= 8 &&
+    /[A-Z]/.test(pass) && /[a-z]/.test(pass) &&
+    /[0-9]/.test(pass) &&
+    /[^A-Za-z0-9]/.test(pass);
+
+  if (!requirementsValid) {
+    errEl.textContent = 'Password does not meet security requirements';
+    errEl.classList.add('show');
+    return;
+  }
+  if (pass !== confirm) {
+    errEl.textContent = 'Passwords do not match';
+    errEl.classList.add('show');
+    document.getElementById('setup-confirm').classList.add('error');
+    return;
+  }
+
+  errEl.classList.remove('show');
+  document.getElementById('setup-confirm').classList.remove('error');
+
+  // Cryptographic random salt
+  const saltArray = new Uint8Array(16);
+  crypto.getRandomValues(saltArray);
+  const salt = Array.from(saltArray).map(b => b.toString(16).padStart(2,'0')).join('');
+  localStorage.setItem('admin_pw_salt', salt);
+
+  const hash = await secureHash(pass, salt);
+  localStorage.setItem(HASH_KEY, hash);
+  sessionStorage.setItem(SESSION_KEY, hash);
+
+  localStorage.setItem('admin_failed_attempts', '0');
+
+  showDashboard();
+  showAdminToast('✓ Secure password configured! Welcome!', 'success');
+}
+
+// Secure Login
+async function login() {
+  if (checkLockout()) return;
+
+  const passEl = document.getElementById('login-pass');
+  const errEl  = document.getElementById('login-error');
+  const btn    = document.getElementById('login-btn');
+
+  const val = passEl.value;
+  if (!val) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Checking cryptographic key...';
+
+  const salt = localStorage.getItem('admin_pw_salt') || '';
+  const hash = await secureHash(val, salt);
+  const stored = localStorage.getItem(HASH_KEY);
+
+  if (hash === stored) {
+    sessionStorage.setItem(SESSION_KEY, hash);
+    localStorage.setItem('admin_failed_attempts', '0');
+    errEl.classList.remove('show');
+    passEl.classList.remove('error');
+    passEl.value = '';
+    showDashboard();
+  } else {
+    let failed = parseInt(localStorage.getItem('admin_failed_attempts') || '0') + 1;
+    localStorage.setItem('admin_failed_attempts', failed.toString());
+
+    if (failed >= 5) {
+      const lockoutTime = Date.now() + 5 * 60 * 1000;
+      localStorage.setItem('admin_lockout_until', lockoutTime.toString());
+      checkLockout();
+      passEl.value = '';
+      errEl.classList.remove('show');
+    } else {
+      errEl.textContent = `Wrong password. Attempt ${failed} of 5 before lockout.`;
+      errEl.classList.add('show');
+      passEl.classList.add('error');
+      passEl.value = '';
+      passEl.focus();
+      btn.disabled = false;
+      btn.textContent = 'Login to Dashboard';
+      
+      document.querySelector('.login-card').style.animation = 'none';
+      setTimeout(() => document.querySelector('.login-card').style.animation = '', 10);
+    }
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').textContent = 'Login to Dashboard';
+  document.getElementById('login-error').classList.remove('show');
+  document.getElementById('login-pass').classList.remove('error');
+}
+
+function showDashboard() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'grid';
+  loadDashboardData();
+}
+
+// ── Panel Navigation ──────────────────────────
+function showPanel(name, el) {
+  event && event.preventDefault();
+  // Hide all panels
+  document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+  // Show target
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.classList.add('active');
+  // Update sidebar active
+  document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+  if (el) el.classList.add('active');
+  // Update topbar title
+  const titles = { projects:'🚀 Projects', social:'🔗 Social Links', bio:'📝 Bio / About', settings:'🔐 Security' };
+  setText('panel-title', titles[name] || name);
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// ── Load Dashboard Data ───────────────────────
+function loadDashboardData() {
+  loadProjectsTable();
+  loadSocialLinksEditor();
+  loadBioEditor();
+}
+
+// ── Projects CRUD ─────────────────────────────
+function getProjects() {
+  try { return JSON.parse(localStorage.getItem('portfolio_projects') || '[]'); }
+  catch { return []; }
+}
+function saveProjects(projects) {
+  localStorage.setItem('portfolio_projects', JSON.stringify(projects));
+}
+
+async function addProject() {
+  const icon     = document.getElementById('p-icon').value.trim() || '🌐';
+  const category = document.getElementById('p-category').value;
+  const url      = document.getElementById('p-url').value.trim();
+  const tags     = document.getElementById('p-tags').value.trim();
+  let imageUrl   = document.getElementById('p-image-url').value.trim();
+
+  const fileInput = document.getElementById('p-image-file');
+  if (fileInput && fileInput.files && fileInput.files[0]) {
+    try {
+      imageUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(fileInput.files[0]);
+      });
+    } catch (e) {
+      console.error("Failed to read local image file", e);
+    }
+  }
+
+  const titleKu = document.getElementById('p-title-ku').value.trim();
+  const titleEn = document.getElementById('p-title-en').value.trim();
+
+  const descKu  = document.getElementById('p-desc-ku').value.trim();
+  const descEn  = document.getElementById('p-desc-en').value.trim();
+
+  if (!titleKu && !titleEn) {
+    showAdminToast('⚠️ Please enter a project title (Kurdish or English)', 'error');
+    return;
+  }
+  if (!url) {
+    showAdminToast('⚠️ Please enter a project URL', 'error');
+    return;
+  }
+
+  // Fallbacks
+  const finalTitleKu = titleKu || titleEn;
+  const finalTitleEn = titleEn || titleKu;
+  const finalDescKu  = descKu || descEn;
+  const finalDescEn  = descEn || descKu;
+
+  const project = {
+    id:       Date.now().toString(),
+    icon,
+    category,
+    url,
+    imageUrl,
+    tags,
+    title:    { ku: finalTitleKu, en: finalTitleEn, ar: finalTitleEn, fa: finalTitleEn },
+    desc:     { ku: finalDescKu,  en: finalDescEn,  ar: finalDescEn,  fa: finalDescEn  },
+    createdAt: new Date().toISOString()
+  };
+
+  const projects = getProjects();
+  projects.unshift(project);
+  saveProjects(projects);
+  clearProjectForm();
+  loadProjectsTable();
+  showAdminToast('✓ Project added!', 'success');
+}
+
+function clearProjectForm() {
+  ['p-title-ku', 'p-title-en', 'p-desc-ku', 'p-desc-en', 'p-url', 'p-image-url', 'p-image-file'].forEach(id => { 
+    const el = document.getElementById(id); 
+    if (el) el.value = ''; 
+  });
+}
+
+function deleteProject(id) {
+  if (!confirm('Delete this project?')) return;
+  let projects = getProjects().filter(p => p.id !== id);
+  saveProjects(projects);
+  loadProjectsTable();
+  showAdminToast('🗑️ Project deleted', 'success');
+}
+
+function loadProjectsTable() {
+  const tbody = document.getElementById('projects-table-body');
+  if (!tbody) return;
+  const projects = getProjects();
+
+  if (projects.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">🚀</div><p>No projects yet. Add your first one above!</p></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = projects.map(p => `
+    <tr>
+      <td><div class="project-table-icon">${escHtml(p.icon||'🌐')}</div></td>
+      <td><strong>EN:</strong> ${escHtml(p.title?.en || '-')}<br/>
+          <span style="font-size:0.78rem;color:var(--muted)"><strong>KU:</strong> ${escHtml(p.title?.ku||'-')}</span></td>
+      <td><span style="font-size:0.78rem;font-weight:600;color:var(--cyan);text-transform:uppercase;letter-spacing:1px">${escHtml(p.category||'')}</span></td>
+      <td><a href="${escHtml(p.url||'#')}" target="_blank" style="color:var(--cyan);text-decoration:none;font-size:0.82rem;white-space:nowrap">
+          ${p.url ? (p.url.replace(/https?:\/\//,'').substring(0,30) + (p.url.length>35?'...':'')) : '-'} ↗
+      </a></td>
+      <td>
+        <div class="table-actions">
+          <button class="btn-admin btn-admin-danger btn-admin-sm" onclick="deleteProject('${p.id}')">🗑️ Delete</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function clearAllProjects() {
+  if (!confirm('Are you sure? This will delete ALL projects. This cannot be undone.')) return;
+  localStorage.removeItem('portfolio_projects');
+  loadProjectsTable();
+  showAdminToast('🗑️ All projects cleared', 'success');
+}
+
+// ── Social Links ──────────────────────────────
+const SOCIAL_PLATFORMS = ['instagram','telegram','whatsapp','facebook','tiktok','snapchat'];
+
+function loadSocialLinksEditor() {
+  try {
+    const links = JSON.parse(localStorage.getItem('portfolio_social') || '{}');
+    SOCIAL_PLATFORMS.forEach(p => {
+      const urlEl    = document.getElementById('sl-' + p + '-url');
+      const handleEl = document.getElementById('sl-' + p + '-handle');
+      if (urlEl)    urlEl.value    = links[p]?.url    || '';
+      if (handleEl) handleEl.value = links[p]?.handle || '';
+    });
+  } catch(e) { console.error(e); }
+}
+
+function saveSocialLinks() {
+  const links = {};
+  SOCIAL_PLATFORMS.forEach(p => {
+    const url    = document.getElementById('sl-' + p + '-url')?.value.trim()    || '';
+    const handle = document.getElementById('sl-' + p + '-handle')?.value.trim() || '';
+    links[p] = { url, handle };
+  });
+  localStorage.setItem('portfolio_social', JSON.stringify(links));
+  showAdminToast('✓ Social links saved!', 'success');
+}
+
+// ── Bio Editor ────────────────────────────────
+let currentBioTab = 'ku';
+
+function loadBioEditor() {
+  try {
+    const bios = JSON.parse(localStorage.getItem('portfolio_bios') || '{}');
+    ['ku','ar','en','fa'].forEach(lang => {
+      const el = document.getElementById('bio-text-' + lang);
+      if (el) el.value = bios[lang] || '';
+    });
+  } catch(e) {}
+}
+
+function switchBioTab(lang, btn) {
+  currentBioTab = lang;
+  document.querySelectorAll('.bio-editor').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.bio-tab').forEach(b => b.classList.remove('active'));
+  const editor = document.getElementById('bio-' + lang);
+  if (editor) editor.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+function saveBio() {
+  const bios = {};
+  ['ku','ar','en','fa'].forEach(lang => {
+    const el = document.getElementById('bio-text-' + lang);
+    if (el && el.value.trim()) bios[lang] = el.value.trim();
+  });
+  localStorage.setItem('portfolio_bios', JSON.stringify(bios));
+  showAdminToast('✓ Bio saved!', 'success');
+}
+
+// ── Password Change ───────────────────────────
+async function changePassword() {
+  const cur     = document.getElementById('cur-pass').value;
+  const newPass = document.getElementById('new-pass').value;
+  const confirm = document.getElementById('confirm-pass').value;
+  const errEl   = document.getElementById('pass-error');
+
+  const requirementsValid = 
+    newPass.length >= 8 &&
+    /[A-Z]/.test(newPass) && /[a-z]/.test(newPass) &&
+    /[0-9]/.test(newPass) &&
+    /[^A-Za-z0-9]/.test(newPass);
+
+  if (!requirementsValid) {
+    showAdminToast('⚠️ New password must be at least 8 characters and meet all security criteria', 'error'); return;
+  }
+  if (newPass !== confirm) {
+    errEl.classList.add('show'); return;
+  }
+  errEl.classList.remove('show');
+
+  const curSalt = localStorage.getItem('admin_pw_salt') || '';
+  const curHash = await secureHash(cur, curSalt);
+  const stored  = localStorage.getItem(HASH_KEY);
+  if (curHash !== stored) {
+    showAdminToast('❌ Current password is wrong', 'error'); return;
+  }
+
+  // Generate new cryptographic salt
+  const saltArray = new Uint8Array(16);
+  crypto.getRandomValues(saltArray);
+  const newSalt = Array.from(saltArray).map(b => b.toString(16).padStart(2,'0')).join('');
+  localStorage.setItem('admin_pw_salt', newSalt);
+
+  const newHash = await secureHash(newPass, newSalt);
+  localStorage.setItem(HASH_KEY, newHash);
+  sessionStorage.setItem(SESSION_KEY, newHash);
+  
+  document.getElementById('cur-pass').value = '';
+  document.getElementById('new-pass').value = '';
+  document.getElementById('confirm-pass').value = '';
+  resetStrengthBars();
+  showAdminToast('✓ Password updated securely!', 'success');
+}
+
+function checkStrength(pass) {
+  const requirements = {
+    len: pass.length >= 8,
+    case: /[A-Z]/.test(pass) && /[a-z]/.test(pass),
+    num: /[0-9]/.test(pass),
+    spec: /[^A-Za-z0-9]/.test(pass)
+  };
+  let score = 0;
+  if (requirements.len) score++;
+  if (requirements.case) score++;
+  if (requirements.num) score++;
+  if (requirements.spec) score++;
+
+  const bars = [1,2,3,4].map(i => document.getElementById('s'+i));
+  bars.forEach(b => { if(b) b.className='strength-bar'; });
+  if (!pass) return;
+
+  const cls = score <= 2 ? 'filled weak' : score === 3 ? 'filled medium' : 'filled';
+  for (let i=0; i<score; i++) {
+    if (bars[i]) bars[i].className = 'strength-bar ' + cls;
+  }
+}
+function resetStrengthBars() {
+  [1,2,3,4].forEach(i => { const b=document.getElementById('s'+i); if(b) b.className='strength-bar'; });
+}
+
+// ── Toast ─────────────────────────────────────
+function showAdminToast(msg, type='success') {
+  const toast = document.getElementById('admin-toast');
+  const msgEl = document.getElementById('a-toast-msg');
+  const icon  = document.getElementById('a-toast-icon');
+  if (!toast) return;
+  toast.className = 'admin-toast ' + type;
+  msgEl.textContent = msg;
+  icon.textContent  = type === 'success' ? '✓' : '⚠';
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ── Utils ─────────────────────────────────────
+function escHtml(str) {
+  return String(str||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Handle enter key in login ─────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (document.getElementById('login-pass') === document.activeElement) login();
+    if (document.getElementById('setup-confirm') === document.activeElement) setupPassword();
+  }
+});

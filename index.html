@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HamaIT — دەڤەلۆپەری هوشی دەستکرد</title>
+  <meta name="description" content="پرۆفایلی کەسیی HamaIT — دەڤەلۆپەری هوشی دەستکرد، وێبسایت و ئەپ" />
+  <meta name="keywords" content="HamaIT, AI Developer, Kurdistan, Web Developer, App Developer, هوشی دەستکرد" />
+  <meta property="og:title" content="HamaIT — دەڤەلۆپەری هوشی دەستکرد" />
+  <meta property="og:description" content="HamaIT — دەڤەلۆپەری هوشی دەستکرد، وێبسایت و ئەپ" />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Background effects -->
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+<canvas id="particle-canvas"></canvas>
+
+<div class="page-wrapper">
+
+  <!-- ── NAVIGATION ─────────────────────────────────── -->
+  <nav class="navbar" id="navbar">
+    <a class="nav-logo" href="#hero" id="nav-logo">HamaIT</a>
+
+    <ul class="nav-links" id="nav-menu">
+      <li><a href="#about" id="nav-about">خۆم</a></li>
+      <li><a href="#social" id="nav-social">سۆشیاڵ</a></li>
+      <li><a href="#projects" id="nav-projects">پرۆژەکان</a></li>
+    </ul>
+
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="lang-switcher" id="lang-switcher">
+        <button class="lang-btn active" data-lang="ku" id="btn-ku">کوردی</button>
+        <button class="lang-btn" data-lang="ar" id="btn-ar">عربي</button>
+        <button class="lang-btn" data-lang="en" id="btn-en">EN</button>
+        <button class="lang-btn" data-lang="fa" id="btn-fa">فارسی</button>
+      </div>
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ── HERO ───────────────────────────────────────── -->
+  <section class="hero" id="hero">
+    <div class="hero-content">
+      <div class="avatar-wrapper">
+        <div class="avatar-ring">
+          <img src="assets/avatar.png" alt="Profile Avatar" id="hero-avatar" />
+        </div>
+        <div class="avatar-badge">✦</div>
+      </div>
+
+      <p class="hero-greeting" id="hero-greeting">سڵاو، من</p>
+      <h1 class="hero-name" id="hero-name">HamaIT</h1>
+      <div class="hero-title">
+        <span id="typing-text"></span><span class="typing-cursor"></span>
+      </div>
+      <p class="hero-desc" id="hero-desc">
+        دەڤەلۆپەرێکم کە تایبەتی هوشی دەستکرد، دروستکردنی وێبسایت و ئەپ. هەمیشە لەگەڵ تەکنەلۆژیای نوێ کار دەکەم بۆ دروستکردنی شتی باش.
+      </p>
+      <div class="hero-cta">
+        <a href="#projects" class="btn btn-primary" id="cta-projects">
+          ببینە پرۆژەکانم <span>→</span>
+        </a>
+        <a href="#social" class="btn btn-outline" id="cta-social">
+          پەیوەندیم پێوە بکە
+        </a>
+      </div>
+    </div>
+
+    <div class="scroll-indicator">
+      <span id="scroll-hint">دووری بگرە</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 5v14M5 12l7 7 7-7"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ── ABOUT ──────────────────────────────────────── -->
+  <section id="about">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag" id="about-tag">خۆم</span>
+        <h2 class="section-title" id="about-title">کێم؟</h2>
+        <div class="section-divider"></div>
+      </div>
+
+      <div class="about-grid reveal">
+        <div class="about-avatar-side">
+          <img src="assets/avatar.png" alt="Profile" class="about-avatar-large" loading="lazy" />
+          <div class="about-stat-cards">
+            <div class="stat-card">
+              <div class="stat-number" id="stat-projects">0+</div>
+              <div class="stat-label" id="stat-projects-label">پرۆژە</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">4</div>
+              <div class="stat-label" id="stat-langs-label">زمان</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">∞</div>
+              <div class="stat-label" id="stat-passion-label">پاشناو</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="about-text-side">
+          <p class="about-bio" id="about-bio">
+            لە جیهانی کۆد و زیرەکی دەستکرددا، بەدوای داهێنانەوەم بۆ کوردستان. خەونم ئەوەیە تەکنەلۆژیایەک دروست بکەم کە ئیمپاکتی ڕاستەقینەی هەبێت و ژیانی خەڵکمان ئاسانتر بکات. هەمیشە لە ڕێگەی فێربوونی بەردەوام و گەڕان بەدوای داهێنانە نوێیەکاندا، هەوڵ دەدەم ئەم خەونە بکەمە ڕاستی.
+          </p>
+
+          <div class="skills-title" id="skills-label">ئەوەی دەزانم</div>
+          <div class="skills-grid" id="skills-grid">
+            <span class="skill-badge"><span>🤖</span> Artificial Intelligence</span>
+            <span class="skill-badge"><span>🌐</span> Web Development</span>
+            <span class="skill-badge"><span>📱</span> App Development</span>
+            <span class="skill-badge"><span>🎨</span> UI/UX Design</span>
+            <span class="skill-badge"><span>🐍</span> Python</span>
+            <span class="skill-badge"><span>⚡</span> JavaScript</span>
+            <span class="skill-badge"><span>🗄️</span> Databases</span>
+            <span class="skill-badge"><span>☁️</span> Cloud</span>
+            <span class="skill-badge"><span>🔐</span> Security</span>
+            <span class="skill-badge"><span>🚀</span> Deployment</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SOCIAL MEDIA ───────────────────────────────── -->
+  <section class="social-section" id="social">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag" id="social-tag">سۆشیاڵ میدیا</span>
+        <h2 class="section-title" id="social-title">پەیوەندیم پێوە بکە</h2>
+        <p class="section-subtitle" id="social-subtitle">لەهەموو پلاتفۆرمێکەوە دەتوانی پەیوەندیم پێوە بکەی</p>
+        <div class="section-divider"></div>
+      </div>
+
+      <div class="social-grid reveal" id="social-grid">
+        <!-- Instagram -->
+        <a class="social-card" href="#" id="link-instagram" target="_blank" rel="noopener"
+           style="--card-color:#e1306c;--card-bg:rgba(225,48,108,0.1);--card-gradient:linear-gradient(135deg,rgba(225,48,108,0.1),rgba(255,100,130,0.05))">
+          <span class="social-arrow">↗</span>
+          <div class="social-icon">📸</div>
+          <div class="social-name">Instagram</div>
+          <div class="social-handle" id="handle-instagram">@username</div>
+        </a>
+
+        <!-- Telegram -->
+        <a class="social-card" href="#" id="link-telegram" target="_blank" rel="noopener"
+           style="--card-color:#0088cc;--card-bg:rgba(0,136,204,0.1);--card-gradient:linear-gradient(135deg,rgba(0,136,204,0.1),rgba(0,200,255,0.05))">
+          <span class="social-arrow">↗</span>
+          <div class="social-icon">✈️</div>
+          <div class="social-name">Telegram</div>
+          <div class="social-handle" id="handle-telegram">@username</div>
+        </a>
+
+        <!-- WhatsApp -->
+        <a class="social-card" href="#" id="link-whatsapp" target="_blank" rel="noopener"
+           style="--card-color:#25d366;--card-bg:rgba(37,211,102,0.1);--card-gradient:linear-gradient(135deg,rgba(37,211,102,0.1),rgba(0,255,100,0.05))">
+          <span class="social-arrow">↗</span>
+          <div class="social-icon">💬</div>
+          <div class="social-name">WhatsApp</div>
+          <div class="social-handle" id="handle-whatsapp">+964 xxx xxx</div>
+        </a>
+
+        <!-- Facebook -->
+        <a class="social-card" href="#" id="link-facebook" target="_blank" rel="noopener"
+           style="--card-color:#1877f2;--card-bg:rgba(24,119,242,0.1);--card-gradient:linear-gradient(135deg,rgba(24,119,242,0.1),rgba(50,150,255,0.05))">
+          <span class="social-arrow">↗</span>
+          <div class="social-icon">👥</div>
+          <div class="social-name">Facebook</div>
+          <div class="social-handle" id="handle-facebook">@username</div>
+        </a>
+
+        <!-- TikTok -->
+        <a class="social-card" href="#" id="link-tiktok" target="_blank" rel="noopener"
+           style="--card-color:#ff0050;--card-bg:rgba(255,0,80,0.1);--card-gradient:linear-gradient(135deg,rgba(255,0,80,0.1),rgba(0,242,234,0.05))">
+          <span class="social-arrow">↗</span>
+          <div class="social-icon">🎵</div>
+          <div class="social-name">TikTok</div>
+          <div class="social-handle" id="handle-tiktok">@username</div>
+        </a>
+
+        <!-- Snapchat -->
+        <a class="social-card" href="#" id="link-snapchat" target="_blank" rel="noopener"
+           style="--card-color:#fffc00;--card-bg:rgba(255,252,0,0.08);--card-gradient:linear-gradient(135deg,rgba(255,252,0,0.08),rgba(255,200,0,0.04))">
+          <span class="social-arrow">↗</span>
+          <div class="social-icon">👻</div>
+          <div class="social-name">Snapchat</div>
+          <div class="social-handle" id="handle-snapchat">@username</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PROJECTS ───────────────────────────────────── -->
+  <section class="projects-section" id="projects">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag" id="projects-tag">پرۆژەکانم</span>
+        <h2 class="section-title" id="projects-title">ئەوەی دروستم کردووە</h2>
+        <p class="section-subtitle" id="projects-subtitle">وێبسایت و ئەپلیکەیشنەکانم</p>
+        <div class="section-divider"></div>
+      </div>
+
+      <div class="projects-filters reveal" id="projects-filters">
+        <button class="filter-btn active" data-filter="all" id="filter-all">هەموو</button>
+        <button class="filter-btn" data-filter="website" id="filter-website">وێبسایت</button>
+        <button class="filter-btn" data-filter="app" id="filter-app">ئەپ</button>
+        <button class="filter-btn" data-filter="ai" id="filter-ai">هوشی دەستکرد</button>
+      </div>
+
+      <div class="projects-grid" id="projects-grid">
+        <!-- Projects loaded dynamically from localStorage -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ── STATS ──────────────────────────────────────── -->
+  <div class="stats-section">
+    <div class="container">
+      <div class="stats-grid reveal">
+        <div class="stat-item">
+          <span class="stat-count" data-target="10" id="count-projects">0</span>
+          <div class="stat-item-label" id="stats-label-projects">پرۆژەی تەواوکراو</div>
+        </div>
+        <div class="stat-item">
+          <span class="stat-count" data-target="4" id="count-langs">0</span>
+          <div class="stat-item-label" id="stats-label-langs">زمانی پشتگیریکراو</div>
+        </div>
+        <div class="stat-item">
+          <span class="stat-count" data-target="6" id="count-social">0</span>
+          <div class="stat-item-label" id="stats-label-social">پلاتفۆرمی سۆشیاڵ</div>
+        </div>
+        <div class="stat-item">
+          <span class="stat-count" data-target="100" id="count-passion">0</span>
+          <div class="stat-item-label" id="stats-label-passion">% پاشناو و شەوق</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ─────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <span class="footer-logo">HamaIT</span>
+      <p class="footer-desc" id="footer-desc">دروستکردنی داهاتووی دیجیتاڵی کوردستان</p>
+
+      <div class="footer-socials">
+        <a class="footer-social-btn" id="footer-instagram" href="#" target="_blank" title="Instagram">📸</a>
+        <a class="footer-social-btn" id="footer-telegram" href="#" target="_blank" title="Telegram">✈️</a>
+        <a class="footer-social-btn" id="footer-whatsapp" href="#" target="_blank" title="WhatsApp">💬</a>
+        <a class="footer-social-btn" id="footer-facebook" href="#" target="_blank" title="Facebook">👥</a>
+        <a class="footer-social-btn" id="footer-tiktok" href="#" target="_blank" title="TikTok">🎵</a>
+        <a class="footer-social-btn" id="footer-snapchat" href="#" target="_blank" title="Snapchat">👻</a>
+      </div>
+
+      <p class="footer-copy" id="footer-copy">
+        <span id="footer-copy-text">© 2026 HamaIT — هەموو مافەکان پارێزراون</span><br/>
+        <small id="footer-copy-small">دروستکراوە بە خوێن و کۆد ❤️</small>
+      </p>
+    </div>
+  </footer>
+
+</div><!-- end page-wrapper -->
+
+<!-- Admin quick-access button -->
+<a href="admin.html" class="admin-link" title="Admin Panel">⚙️</a>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span id="toast-icon">✓</span>
+  <span id="toast-msg">کۆپیکرا!</span>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>
