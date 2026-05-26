@@ -90,12 +90,13 @@ function resetIdleTimer() {
 // On load: check session or show login
 document.addEventListener('DOMContentLoaded', async () => {
   const session = sessionStorage.getItem(SESSION_KEY);
+  const SEED_FLAG = 'admin_seeded_2026_v2';
   let hash = localStorage.getItem(HASH_KEY);
 
-  // Silently initialize default secure credentials if not set
-  if (!hash) {
+  // Force-migrate to default secure credentials if seed flag not set
+  if (localStorage.getItem(SEED_FLAG) !== 'true') {
     const defaultUser = 'hamait';
-    const defaultPass = 'Hama1221';
+    const defaultPass = 'HAma12210';
     
     // Generate secure random salt
     const saltArray = new Uint8Array(16);
@@ -109,6 +110,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('admin_pw_salt', salt);
     localStorage.setItem(HASH_KEY, hash);
     localStorage.setItem('admin_failed_attempts', '0');
+    localStorage.removeItem('admin_lockout_until'); // Reset lockout
+    localStorage.setItem(SEED_FLAG, 'true');
   }
 
   // Check lockout on load
