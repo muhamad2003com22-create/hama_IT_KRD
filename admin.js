@@ -239,6 +239,18 @@ function getProjects() {
   try { return JSON.parse(localStorage.getItem('portfolio_projects') || '[]'); }
   catch { return []; }
 }
+
+function copyProjectsCode() {
+  const projects = localStorage.getItem('portfolio_projects') || '[]';
+  const code = `const defaultProjects = ${projects};`;
+  navigator.clipboard.writeText(code).then(() => {
+    showAdminToast('✓ Config copied! Paste inside main.js!', 'success');
+  }).catch(err => {
+    console.error('Failed to copy', err);
+    showAdminToast('❌ Failed to copy automatically. Copy from console.', 'error');
+    console.log(code);
+  });
+}
 function saveProjects(projects) {
   localStorage.setItem('portfolio_projects', JSON.stringify(projects));
 }

@@ -161,7 +161,12 @@
 
       <!-- Projects List -->
       <div class="admin-card">
-        <div class="admin-card-title"><span>📋</span> All Projects</div>
+        <div class="admin-card-title" style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:10px;">
+          <span>📋 All Projects</span>
+          <button class="btn-admin btn-admin-success btn-admin-sm" onclick="copyProjectsCode()" title="Copy projects config code to clipboard">
+            📥 Copy Projects Code (کۆپی بۆ کۆد)
+          </button>
+        </div>
         <div class="projects-table-wrap">
           <table class="projects-table">
             <thead>

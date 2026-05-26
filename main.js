@@ -262,6 +262,12 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error(e);
   }
 
+  // One-time migration to clear old localStorage cache and force default projects
+  if (localStorage.getItem('portfolio_projects_version_3') !== 'true') {
+    localStorage.removeItem('portfolio_projects');
+    localStorage.setItem('portfolio_projects_version_3', 'true');
+  }
+
   applyLanguage(currentLang);
   initParticles();
   initNavScroll();
@@ -271,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initStatsObserver();
   initFilterButtons();
   loadSocialLinks();
-  loadProjects();
   startTyping();
 });
 
@@ -535,10 +540,38 @@ function loadSocialLinks() {
 }
 
 // ── Projects ──────────────────────────────────
+// Paste your projects JSON here to show them to all visitors:
+const defaultProjects = [
+  {
+    id: "bahast-app",
+    icon: "🕌",
+    category: "website",
+    url: "https://nooryislam.vercel.app/",
+    imageUrl: "assets/bahast.png",
+    tags: "Kurdish, Islamic, Quran, Hadith",
+    title: {
+      ku: "بەهەشت لەبیر مەکەن 🌟",
+      en: "Remember Heaven 🌟",
+      ar: "لا تنسى الجنة 🌟",
+      fa: "بهشت را فراموش نکنید 🌟"
+    },
+    desc: {
+      ku: "پلاتفۆرمێکی ئاینی دەوڵەمەند کە قورئان، فەرموودە، خەوننامە، و ژیانی پێغەمبەران لەخۆدەگرێت.",
+      en: "A rich religious platform that includes the Quran, Hadith, dream interpretation, and the lives of the prophets.",
+      ar: "منصة دينية غنية تحتوي على القرآن الكريم، الأحاديث النبوية، تفسير الأحلام، وسير الأنبياء.",
+      fa: "یک پلتفرم مذهبی غنی شامل قرآن، احادیث، تعبیر خواب و زندگی پیامبران."
+    }
+  }
+];
+
 function getProjects() {
   try {
-    return JSON.parse(localStorage.getItem('portfolio_projects') || '[]');
-  } catch { return []; }
+    const local = localStorage.getItem('portfolio_projects');
+    if (local && JSON.parse(local).length > 0) {
+      return JSON.parse(local);
+    }
+  } catch {}
+  return defaultProjects;
 }
 
 function renderProjects() {
@@ -564,7 +597,7 @@ function renderProjects() {
     const title = p.title?.[currentLang] || p.title?.en || p.title?.ku || 'Project';
     const desc  = p.desc?.[currentLang]  || p.desc?.en  || p.desc?.ku  || '';
     const tags  = (p.tags || '').split(',').map(t => t.trim()).filter(Boolean);
-    const hasImage = p.imageUrl && (p.imageUrl.startsWith('http') || p.imageUrl.startsWith('data:image'));
+    const hasImage = !!p.imageUrl;
     return `
       <div class="project-card reveal visible" data-id="${p.id}">
         ${hasImage ? `<div class="project-card-image-wrap"><img src="${p.imageUrl}" alt="${escHtml(title)}" class="project-card-image" /></div>` : ''}
