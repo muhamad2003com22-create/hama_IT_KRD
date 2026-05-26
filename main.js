@@ -200,6 +200,27 @@ const translations = {
   }
 };
 
+// ── Firebase Configuration ─────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyBUjyPpgaiS4ndlSiEuMDUwnkJgx9btDHw",
+  authDomain: "hama-portfolio.firebaseapp.com",
+  projectId: "hama-portfolio",
+  storageBucket: "hama-portfolio.firebasestorage.app",
+  messagingSenderId: "112470438769",
+  appId: "1:112470438769:web:d544900ba6c023b856fcd0",
+  measurementId: "G-CTSN40HE4B"
+};
+
+let db = null;
+if (typeof firebase !== 'undefined') {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  } catch (e) {
+    console.error("Firebase init failed:", e);
+  }
+}
+
 // ── State ─────────────────────────────────────
 let currentLang = localStorage.getItem('portfolio_lang') || 'ku';
 let typingIndex = 0;
@@ -262,11 +283,13 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error(e);
   }
 
-  // One-time migration to clear old localStorage cache and force default projects
-  if (localStorage.getItem('portfolio_projects_version_3') !== 'true') {
-    localStorage.removeItem('portfolio_projects');
-    localStorage.setItem('portfolio_projects_version_3', 'true');
-  }
+  // Load cached projects from Firestore if any
+  try {
+    const cached = localStorage.getItem('portfolio_projects_cache');
+    if (cached) {
+      currentProjectsList = JSON.parse(cached);
+    }
+  } catch {}
 
   applyLanguage(currentLang);
   initParticles();
@@ -278,6 +301,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initFilterButtons();
   loadSocialLinks();
   startTyping();
+
+  // Fetch latest from Firestore in the background
+  loadFirestoreProjects();
 });
 
 // ── Language System ───────────────────────────
@@ -564,14 +590,37 @@ const defaultProjects = [
   }
 ];
 
+let currentProjectsList = defaultProjects;
+
 function getProjects() {
-  try {
-    const local = localStorage.getItem('portfolio_projects');
-    if (local && JSON.parse(local).length > 0) {
-      return JSON.parse(local);
-    }
-  } catch {}
-  return defaultProjects;
+  return currentProjectsList;
+}
+
+function loadFirestoreProjects() {
+  if (!db) return;
+  db.collection("projects").orderBy("createdAt", "desc").get()
+    .then(snapshot => {
+      const dbProjects = [];
+      snapshot.forEach(doc => {
+        dbProjects.push({ id: doc.id, ...doc.data() });
+      });
+      if (dbProjects.length > 0) {
+        currentProjectsList = dbProjects;
+        try {
+          localStorage.setItem('portfolio_projects_cache', JSON.stringify(dbProjects));
+        } catch(e) {}
+        renderProjects();
+        
+        // Update stats projects count dynamically
+        const countEl = document.getElementById('count-projects');
+        if (countEl) countEl.textContent = dbProjects.length + '+';
+        const statEl = document.getElementById('stat-projects');
+        if (statEl) statEl.textContent = dbProjects.length + '+';
+      }
+    })
+    .catch(err => {
+      console.error("Error fetching projects from firestore:", err);
+    });
 }
 
 function renderProjects() {

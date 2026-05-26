@@ -6,6 +6,27 @@
 const HASH_KEY    = 'admin_pw_hash';
 const SESSION_KEY = 'admin_session';
 
+// ── Firebase Configuration ─────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyBUjyPpgaiS4ndlSiEuMDUwnkJgx9btDHw",
+  authDomain: "hama-portfolio.firebaseapp.com",
+  projectId: "hama-portfolio",
+  storageBucket: "hama-portfolio.firebasestorage.app",
+  messagingSenderId: "112470438769",
+  appId: "1:112470438769:web:d544900ba6c023b856fcd0",
+  measurementId: "G-CTSN40HE4B"
+};
+
+let db = null;
+if (typeof firebase !== 'undefined') {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  } catch (e) {
+    console.error("Firebase init failed:", e);
+  }
+}
+
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
@@ -235,27 +256,11 @@ function loadDashboardData() {
 }
 
 // ── Projects CRUD ─────────────────────────────
-function getProjects() {
-  try { return JSON.parse(localStorage.getItem('portfolio_projects') || '[]'); }
-  catch { return []; }
-}
-
-function copyProjectsCode() {
-  const projects = localStorage.getItem('portfolio_projects') || '[]';
-  const code = `const defaultProjects = ${projects};`;
-  navigator.clipboard.writeText(code).then(() => {
-    showAdminToast('✓ Config copied! Paste inside main.js!', 'success');
-  }).catch(err => {
-    console.error('Failed to copy', err);
-    showAdminToast('❌ Failed to copy automatically. Copy from console.', 'error');
-    console.log(code);
-  });
-}
-function saveProjects(projects) {
-  localStorage.setItem('portfolio_projects', JSON.stringify(projects));
-}
-
 async function addProject() {
+  if (!db) {
+    showAdminToast('❌ Database connection not initialized', 'error');
+    return;
+  }
   const icon     = document.getElementById('p-icon').value.trim() || '🌐';
   const category = document.getElementById('p-category').value;
   const url      = document.getElementById('p-url').value.trim();
@@ -298,7 +303,6 @@ async function addProject() {
   const finalDescEn  = descEn || descKu;
 
   const project = {
-    id:       Date.now().toString(),
     icon,
     category,
     url,
@@ -309,12 +313,27 @@ async function addProject() {
     createdAt: new Date().toISOString()
   };
 
-  const projects = getProjects();
-  projects.unshift(project);
-  saveProjects(projects);
-  clearProjectForm();
-  loadProjectsTable();
-  showAdminToast('✓ Project added!', 'success');
+  db.collection("projects").add(project)
+    .then(() => {
+      clearProjectForm();
+      loadProjectsTable();
+      showAdminToast('✓ Project added to database!', 'success');
+    })
+    .catch(err => {
+      console.error(err);
+      showAdminToast('❌ Database write failed', 'error');
+    });
+}
+
+function copyProjectsCode() {
+  const cached = localStorage.getItem('portfolio_projects_cache') || '[]';
+  const code = `const defaultProjects = ${cached};`;
+  navigator.clipboard.writeText(code).then(() => {
+    showAdminToast('✓ Config copied! Paste inside main.js!', 'success');
+  }).catch(err => {
+    console.error('Failed to copy', err);
+    showAdminToast('❌ Failed to copy automatically.', 'error');
+  });
 }
 
 function clearProjectForm() {
@@ -325,46 +344,79 @@ function clearProjectForm() {
 }
 
 function deleteProject(id) {
+  if (!db) return;
   if (!confirm('Delete this project?')) return;
-  let projects = getProjects().filter(p => p.id !== id);
-  saveProjects(projects);
-  loadProjectsTable();
-  showAdminToast('🗑️ Project deleted', 'success');
+  db.collection("projects").doc(id).delete()
+    .then(() => {
+      loadProjectsTable();
+      showAdminToast('🗑️ Project deleted from database', 'success');
+    })
+    .catch(err => {
+      console.error(err);
+      showAdminToast('❌ Delete failed', 'error');
+    });
 }
 
 function loadProjectsTable() {
   const tbody = document.getElementById('projects-table-body');
   if (!tbody) return;
-  const projects = getProjects();
-
-  if (projects.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">🚀</div><p>No projects yet. Add your first one above!</p></div></td></tr>`;
+  if (!db) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><p style="color:var(--red)">Database connection offline</p></div></td></tr>`;
     return;
   }
 
-  tbody.innerHTML = projects.map(p => `
-    <tr>
-      <td><div class="project-table-icon">${escHtml(p.icon||'🌐')}</div></td>
-      <td><strong>EN:</strong> ${escHtml(p.title?.en || '-')}<br/>
-          <span style="font-size:0.78rem;color:var(--muted)"><strong>KU:</strong> ${escHtml(p.title?.ku||'-')}</span></td>
-      <td><span style="font-size:0.78rem;font-weight:600;color:var(--cyan);text-transform:uppercase;letter-spacing:1px">${escHtml(p.category||'')}</span></td>
-      <td><a href="${escHtml(p.url||'#')}" target="_blank" style="color:var(--cyan);text-decoration:none;font-size:0.82rem;white-space:nowrap">
-          ${p.url ? (p.url.replace(/https?:\/\//,'').substring(0,30) + (p.url.length>35?'...':'')) : '-'} ↗
-      </a></td>
-      <td>
-        <div class="table-actions">
-          <button class="btn-admin btn-admin-danger btn-admin-sm" onclick="deleteProject('${p.id}')">🗑️ Delete</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+  db.collection("projects").orderBy("createdAt", "desc").get()
+    .then(snapshot => {
+      const projects = [];
+      snapshot.forEach(doc => {
+        projects.push({ id: doc.id, ...doc.data() });
+      });
+
+      if (projects.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">🚀</div><p>No projects yet. Add your first one above!</p></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = projects.map(p => `
+        <tr>
+          <td><div class="project-table-icon">${escHtml(p.icon||'🌐')}</div></td>
+          <td><strong>EN:</strong> ${escHtml(p.title?.en || '-')}<br/>
+              <span style="font-size:0.78rem;color:var(--muted)"><strong>KU:</strong> ${escHtml(p.title?.ku||'-')}</span></td>
+          <td><span style="font-size:0.78rem;font-weight:600;color:var(--cyan);text-transform:uppercase;letter-spacing:1px">${escHtml(p.category||'')}</span></td>
+          <td><a href="${escHtml(p.url||'#')}" target="_blank" style="color:var(--cyan);text-decoration:none;font-size:0.82rem;white-space:nowrap">
+              ${p.url ? (p.url.replace(/https?:\/\//,'').substring(0,30) + (p.url.length>35?'...':'')) : '-'} ↗
+          </a></td>
+          <td>
+            <div class="table-actions">
+              <button class="btn-admin btn-admin-danger btn-admin-sm" onclick="deleteProject('${p.id}')">🗑️ Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    })
+    .catch(err => {
+      console.error(err);
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><p style="color:var(--red)">Failed to load from database</p></div></td></tr>`;
+    });
 }
 
-function clearAllProjects() {
+async function clearAllProjects() {
+  if (!db) return;
   if (!confirm('Are you sure? This will delete ALL projects. This cannot be undone.')) return;
-  localStorage.removeItem('portfolio_projects');
-  loadProjectsTable();
-  showAdminToast('🗑️ All projects cleared', 'success');
+  
+  try {
+    const snapshot = await db.collection("projects").get();
+    const batch = db.batch();
+    snapshot.forEach(doc => {
+      batch.delete(doc.ref);
+    });
+    await batch.commit();
+    loadProjectsTable();
+    showAdminToast('🗑️ All projects cleared from database', 'success');
+  } catch (err) {
+    console.error(err);
+    showAdminToast('❌ Clear failed', 'error');
+  }
 }
 
 // ── Social Links ──────────────────────────────
