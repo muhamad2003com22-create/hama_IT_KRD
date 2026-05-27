@@ -154,9 +154,14 @@
           </div>
         </div>
 
-        <button class="btn-admin btn-admin-primary" onclick="addProject()" style="margin-top: 20px;">
-          <span>➕</span> Add Project
-        </button>
+        <div style="display: flex; gap: 12px; margin-top: 20px;">
+          <button class="btn-admin btn-admin-primary" id="p-submit-btn" onclick="addProject()">
+            <span id="p-submit-btn-icon">➕</span> <span id="p-submit-btn-text">Add Project</span>
+          </button>
+          <button class="btn-admin btn-admin-secondary" id="p-cancel-btn" onclick="cancelEdit()" style="display: none; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: var(--text-primary);">
+            Cancel Edit
+          </button>
+        </div>
       </div>
 
       <!-- Projects List -->
