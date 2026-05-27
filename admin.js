@@ -256,6 +256,8 @@ function loadDashboardData() {
 }
 
 // ── Projects CRUD ─────────────────────────────
+let loadedProjects = [];
+
 async function addProject() {
   if (!db) {
     showAdminToast('❌ Database connection not initialized', 'error');
@@ -302,6 +304,9 @@ async function addProject() {
   const finalDescKu  = descKu || descEn;
   const finalDescEn  = descEn || descKu;
 
+  const idEl = document.getElementById('p-id');
+  const editId = idEl ? idEl.value : '';
+
   const project = {
     icon,
     category,
@@ -309,20 +314,33 @@ async function addProject() {
     imageUrl,
     tags,
     title:    { ku: finalTitleKu, en: finalTitleEn, ar: finalTitleEn, fa: finalTitleEn },
-    desc:     { ku: finalDescKu,  en: finalDescEn,  ar: finalDescEn,  fa: finalDescEn  },
-    createdAt: new Date().toISOString()
+    desc:     { ku: finalDescKu,  en: finalDescEn,  ar: finalDescEn,  fa: finalDescEn  }
   };
 
-  db.collection("projects").add(project)
-    .then(() => {
-      clearProjectForm();
-      loadProjectsTable();
-      showAdminToast('✓ Project added to database!', 'success');
-    })
-    .catch(err => {
-      console.error(err);
-      showAdminToast('❌ Database write failed', 'error');
-    });
+  if (editId) {
+    db.collection("projects").doc(editId).update(project)
+      .then(() => {
+        cancelEdit();
+        loadProjectsTable();
+        showAdminToast('✓ Project updated successfully!', 'success');
+      })
+      .catch(err => {
+        console.error(err);
+        showAdminToast('❌ Database update failed', 'error');
+      });
+  } else {
+    project.createdAt = new Date().toISOString();
+    db.collection("projects").add(project)
+      .then(() => {
+        clearProjectForm();
+        loadProjectsTable();
+        showAdminToast('✓ Project added to database!', 'success');
+      })
+      .catch(err => {
+        console.error(err);
+        showAdminToast('❌ Database write failed', 'error');
+      });
+  }
 }
 
 function copyProjectsCode() {
@@ -337,10 +355,82 @@ function copyProjectsCode() {
 }
 
 function clearProjectForm() {
-  ['p-title-ku', 'p-title-en', 'p-desc-ku', 'p-desc-en', 'p-url', 'p-image-url', 'p-image-file'].forEach(id => { 
+  ['p-id', 'p-title-ku', 'p-title-en', 'p-desc-ku', 'p-desc-en', 'p-url', 'p-image-url', 'p-image-file'].forEach(id => { 
     const el = document.getElementById(id); 
     if (el) el.value = ''; 
   });
+}
+
+function editProject(id) {
+  const p = loadedProjects.find(item => item.id === id);
+  if (!p) return;
+
+  const idEl = document.getElementById('p-id');
+  if (idEl) idEl.value = id;
+
+  const titleKuEl = document.getElementById('p-title-ku');
+  if (titleKuEl) titleKuEl.value = p.title?.ku || '';
+
+  const titleEnEl = document.getElementById('p-title-en');
+  if (titleEnEl) titleEnEl.value = p.title?.en || '';
+
+  const descKuEl = document.getElementById('p-desc-ku');
+  if (descKuEl) descKuEl.value = p.desc?.ku || '';
+
+  const descEnEl = document.getElementById('p-desc-en');
+  if (descEnEl) descEnEl.value = p.desc?.en || '';
+
+  const urlEl = document.getElementById('p-url');
+  if (urlEl) urlEl.value = p.url || '';
+
+  const imageUrlEl = document.getElementById('p-image-url');
+  if (imageUrlEl) imageUrlEl.value = p.imageUrl || '';
+
+  const fileInput = document.getElementById('p-image-file');
+  if (fileInput) fileInput.value = '';
+
+  const iconEl = document.getElementById('p-icon');
+  if (iconEl) iconEl.value = p.icon || '🌐';
+
+  const categoryEl = document.getElementById('p-category');
+  if (categoryEl) categoryEl.value = p.category || 'website';
+
+  const tagsEl = document.getElementById('p-tags');
+  if (tagsEl) tagsEl.value = p.tags || '';
+
+  // UI state updates
+  const formTitle = document.getElementById('p-form-title');
+  if (formTitle) formTitle.innerHTML = '<span>✏️</span> Edit Project';
+
+  const submitBtnIcon = document.getElementById('p-submit-btn-icon');
+  if (submitBtnIcon) submitBtnIcon.textContent = '💾';
+
+  const submitBtnText = document.getElementById('p-submit-btn-text');
+  if (submitBtnText) submitBtnText.textContent = 'Update Project';
+
+  const cancelBtn = document.getElementById('p-cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = 'inline-flex';
+
+  // Scroll to form
+  const formCard = document.querySelector('.admin-card');
+  if (formCard) formCard.scrollIntoView({ behavior: 'smooth' });
+}
+
+function cancelEdit() {
+  clearProjectForm();
+
+  // UI state reverts
+  const formTitle = document.getElementById('p-form-title');
+  if (formTitle) formTitle.innerHTML = '<span>➕</span> Add New Project';
+
+  const submitBtnIcon = document.getElementById('p-submit-btn-icon');
+  if (submitBtnIcon) submitBtnIcon.textContent = '➕';
+
+  const submitBtnText = document.getElementById('p-submit-btn-text');
+  if (submitBtnText) submitBtnText.textContent = 'Add Project';
+
+  const cancelBtn = document.getElementById('p-cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
 }
 
 function deleteProject(id) {
@@ -372,6 +462,8 @@ function loadProjectsTable() {
         projects.push({ id: doc.id, ...doc.data() });
       });
 
+      loadedProjects = projects;
+
       if (projects.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">🚀</div><p>No projects yet. Add your first one above!</p></div></td></tr>`;
         return;
@@ -388,6 +480,7 @@ function loadProjectsTable() {
           </a></td>
           <td>
             <div class="table-actions">
+              <button class="btn-admin btn-admin-primary btn-admin-sm" onclick="editProject('${p.id}')">✏️ Edit</button>
               <button class="btn-admin btn-admin-danger btn-admin-sm" onclick="deleteProject('${p.id}')">🗑️ Delete</button>
             </div>
           </td>
